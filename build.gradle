@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+    id "com.github.johnrengelman.shadow" version "4.0.2"
+}
+
+group 'xamgore'
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    implementation 'com.google.code.gson:gson:2.8.5'
+
+    // https://mvnrepository.com/artifact/org.jetbrains/annotations
+    compile group: 'org.jetbrains', name: 'annotations', version: '13.0'
+
+    // https://mvnrepository.com/artifact/info.picocli/picocli
+    compile group: 'info.picocli', name: 'picocli', version: '3.6.0'
+
+    // https://mvnrepository.com/artifact/commons-codec/commons-codec
+    compile group: 'commons-codec', name: 'commons-codec', version: '1.11'
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
+
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-compress
+    compile group: 'org.apache.commons', name: 'commons-compress', version: '1.18'
+}
+
+
+// Output to build/libs/gi.jar
+shadowJar {
+    baseName = 'gi'
+    classifier = null
+    version = null
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'git.Main'
+    }
+}
