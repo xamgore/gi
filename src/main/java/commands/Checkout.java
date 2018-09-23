@@ -5,10 +5,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 @Command(description = "Switch branches or restore working treeHash files", mixinStandardHelpOptions = true)
 public class Checkout implements Callable<Void> {

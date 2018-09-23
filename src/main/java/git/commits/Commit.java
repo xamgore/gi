@@ -4,11 +4,13 @@ import git.trees.Tree;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Commit {
   public static String ROOT_COMMIT_ID = "";
 
-  private String parentId;  // todo: list of parents
+  private List<String> parentIds;
   private String message;
   private LocalDateTime date;
   private Tree tree;
@@ -16,9 +18,9 @@ public class Commit {
   private CommitsManager manager;
 
 
-  public Commit(CommitsManager manager, String message, LocalDateTime date, Tree tree, String parentId) {
+  public Commit(CommitsManager manager, String message, LocalDateTime date, Tree tree, List<String> parentIds) {
+    this.parentIds = new LinkedList<>(parentIds);
     this.manager = manager;
-    this.parentId = parentId;
     this.message = message;
     this.date = date;
     this.tree = tree;
@@ -28,8 +30,8 @@ public class Commit {
     return manager.getIdentifier(this);
   }
 
-  public String getParentId() {
-    return parentId;
+  public List<String> getParentIds() {
+    return parentIds;
   }
 
   public @NotNull LocalDateTime getDate() {
@@ -45,7 +47,7 @@ public class Commit {
   }
 
   public boolean isRoot() {
-    return ROOT_COMMIT_ID.equals(parentId);
+    return parentIds.isEmpty();
   }
 
   @Override public boolean equals(Object obj) {

@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.util.Arrays.asList;
 import static util.Terminal.*;
 
 public class Git {
@@ -106,7 +107,7 @@ public class Git {
     }
 
     String parentCommitHash = head.getCommit().getIdentifier();
-    Commit fresh = commits.build(message, index, LocalDateTime.now(), parentCommitHash);
+    Commit fresh = commits.build(message, index, LocalDateTime.now(), asList(parentCommitHash));
 
     if (head.isBranch()) {
       head.getBranch().pinTo(fresh);
@@ -141,8 +142,8 @@ public class Git {
 
   public void status() {
     System.out.println(head.isBranch()
-      ? "On branch " + head.getBranch().getName()
-      : "Detached HEAD");
+        ? "On branch " + head.getBranch().getName()
+        : "Detached HEAD");
 
     Tree headTree = head.getCommit().getTree();
     Collection<Path> newFiles = index.getPathsThatAreNotIn(headTree);
@@ -277,6 +278,19 @@ public class Git {
     setNewGlobalIndexPointer();
   }
 
+  public void createBranch(String branchName, String hashOrBranchName) {
+    Revision toWhere = hashOrBranchName.isEmpty() ? head : revisions.get(hashOrBranchName);
+    branches.set(branchName, toWhere.getCommit());
+    checkout(branchName);
+  }
+
+  public void deleteBranch(String branchName) {
+    if (head.isBranch() && head.getBranch().getName().equals(branchName))
+      throw new GitException("Can't delete the branch where HEAD points to");
+
+    branches.delete(branchName);
+  }
+
   /**
    * Sets the passed revision as the new HEAD.<br>
    * This information is saved to a file in the repository.
@@ -316,5 +330,35 @@ public class Git {
 
   private void setNewGlobalIndexPointer() {
     repo.saveString(INDEX, trees.getIdentifier(index));
+  }
+
+  public void merge(String branchName, boolean mergeIsForced) {
+    if (!head.isBranch()) {
+      throw new GitException("Can't merge in detached state");
+    }
+
+    Commit ours = head.getCommit();
+    Commit their = revisions.fromBranch(branchName).getCommit();
+
+    Set<Commit> commonCommits = commits.pickAllToRoot(ours);
+    commonCommits.retainAll(commits.pickAllToRoot(their));
+
+    Commit LCA = commonCommits.stream()
+        .max(Comparator.comparing(Commit::getDate))
+        .orElseThrow(() -> new GitException("Can't merge branches, there is no LCA"));
+
+    Set<Path> conflictingPaths = index.merge(their.getTree(), LCA.getTree());
+    setNewGlobalIndexPointer();
+
+    if (conflictingPaths.isEmpty() || mergeIsForced) {
+      Commit fresh = commits.build(
+          "Merge " + branchName + " to " + head.getBranch().getName(),
+          index, LocalDateTime.now(), asList(ours.getIdentifier(), their.getIdentifier()));
+      head.getBranch().pinTo(fresh);
+    } else {
+      System.out.println("There are conflicts, resolve them yourself, then run " +
+          c(CYAN, "git merge --force:\n"));
+      display(conflictingPaths, RED, "");
+    }
   }
 }

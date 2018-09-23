@@ -113,4 +113,39 @@ public class Tree {
   public boolean differs(Tree other) {
     return !this.getIdentifier().equals(other.getIdentifier());
   }
+
+  public HashSet<Path> merge(Tree theirs, Tree common) {
+    HashSet<Path> union = new HashSet<>(pathToBlobId.keySet());
+    union.addAll(theirs.pathToBlobId.keySet());
+    union.addAll(common.pathToBlobId.keySet());
+
+    HashSet<Path> conflicts = new HashSet<>();
+
+    for (Path path : union) {
+      if (!same(path, theirs, common) && same(path, this, common)) {
+        // theirs have more actual version
+        if (theirs.has(path)) {
+          String blobId = theirs.pathToBlobId.get(path);
+          pathToBlobId.put(path, blobId);
+          repo.restoreBlobInWorkingDir(path, blobId);
+        } else {
+          repo.deleteWorkingDirFile(path);
+          remove(path.toFile());
+        }
+      } else if (!same(path, theirs, common) && !same(path, this, common) && !same(path, this, theirs)) {
+        conflicts.add(path);
+      }
+    }
+
+    return conflicts;
+  }
+
+  private String get(Path path) {
+    return pathToBlobId.get(path);
+  }
+
+  private boolean same(Path path, Tree first, Tree second) {
+    return first.has(path) && second.has(path) &&
+        first.get(path).equals(second.get(path));
+  }
 }

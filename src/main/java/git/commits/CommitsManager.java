@@ -7,7 +7,7 @@ import git.Hasher;
 import git.repo.RepositoryManager;
 import git.trees.Tree;
 import git.trees.TreeManager;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 import util.PathConverter;
 
 import java.nio.file.Path;
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static git.commits.Commit.ROOT_COMMIT_ID;
+import static java.util.Arrays.asList;
 
 public class CommitsManager {
   private static final String COMMITS_PATH = "commits/";
@@ -32,13 +32,13 @@ public class CommitsManager {
     this.trees = trees;
   }
 
-  public Commit build(String message, Tree tree, LocalDateTime date, String parentId) {
+  public Commit build(String message, Tree tree, LocalDateTime date, List<String> parentIds) {
     // contract: tree is dumped already
-    return dump(new Commit(this, message, date, tree, parentId));
+    return dump(new Commit(this, message, date, tree, parentIds));
   }
 
   public Commit newInitialCommit(Tree index) {
-    return build("Initial commit", index, LocalDateTime.now(), ROOT_COMMIT_ID);
+    return build("Initial commit", index, LocalDateTime.now(), new LinkedList<>());
   }
 
   public boolean exists(String commitIdOrPrefix) {
@@ -70,15 +70,17 @@ public class CommitsManager {
     Map<String, String> map = GSON.fromJson(content, new TypeToken<HashMap<String, String>>() {}.getType());
 
     String message = map.get("message");
-    String parentId = map.get("parent");
     Tree tree = trees.load(map.get("tree"));
     LocalDateTime date = LocalDateTime.parse(map.get("date"));
-    return new Commit(this, message, date, tree, parentId);
+    String parents = map.get("parents");
+    List<String> parentIds = parents.isEmpty()
+        ? new LinkedList<>() : asList(map.get("parents").split(","));
+    return new Commit(this, message, date, tree, parentIds);
   }
 
   private String toJSON(Commit commit) {
     Map<String, Object> object = new HashMap<>();
-    object.put("parent", commit.getParentId());
+    object.put("parents", String.join(",", commit.getParentIds()));
     object.put("message", commit.getMessage());
     object.put("date", commit.getDate().toString());
     object.put("tree", commit.getTree().getIdentifier());
@@ -93,9 +95,8 @@ public class CommitsManager {
     return Hasher.hashHex(jsonDump);
   }
 
-  public @Nullable Commit getParentOf(Commit current) {
-    String parentId = current.getParentId();
-    return parentId.equals(ROOT_COMMIT_ID) ? null : load(parentId);
+  public @NotNull List<Commit> getParentsOf(Commit current) {
+    return current.getParentIds().stream().map(this::load).collect(Collectors.toList());
   }
 
   /**
@@ -126,10 +127,7 @@ public class CommitsManager {
 
       if (!visited.contains(current)) {
         visited.add(current);
-
-        Commit parent = getParentOf(current);
-        if (parent != null)
-          queue.add(parent); // todo: list of parents
+        queue.addAll(getParentsOf(current));
       }
     }
 

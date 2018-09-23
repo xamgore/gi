@@ -2,15 +2,7 @@ package git;
 
 import commands.*;
 import git.repo.FileRepositoryManager;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.filefilter.FileFileFilter;
-import org.apache.commons.io.filefilter.IOFileFilter;
-import org.apache.commons.io.filefilter.NameFileFilter;
-import org.apache.commons.io.filefilter.NotFileFilter;
 import picocli.CommandLine;
-
-import java.io.File;
-import java.nio.file.Paths;
 
 import static picocli.CommandLine.Command;
 import static picocli.CommandLine.RunAll;
@@ -28,7 +20,9 @@ public class Main implements Runnable {
         .addSubcommand("commit", new Commit(git))
         .addSubcommand("reset", new Reset(git))
         .addSubcommand("log", new Log(git))
-        .addSubcommand("checkout", new Checkout(git));
+        .addSubcommand("checkout", new Checkout(git))
+        .addSubcommand("merge", new Merge(git))
+        .addSubcommand("branch", new Branch(git));
 
     try {
       cli.parseWithHandler(new RunAll(), args);
